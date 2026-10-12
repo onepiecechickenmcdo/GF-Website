@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Letter For You</title>
+    <style>
+        /* Modern Reset & Typography */
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400&display=swap');
+
+        :root {
+            --bg-color: #fdfaf6;
+            --paper-bg: #fffbf5;
+            --text-main: #4a3c3c;
+            --accent-warm: #e8a5a5;
+            --accent-hover: #d18a8a;
+            --shadow-soft: 0 10px 40px rgba(74, 60, 60, 0.08);
+            --shadow-hard: 0 4px 15px rgba(74, 60, 60, 0.15);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            overflow: hidden; /* Prevent scrolling when modal is open initially */
+        }
+
+        /* Background Content */
+        .page-content {
+            padding: 4rem 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .page-content h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.5rem;
+            color: var(--text-main);
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(253, 250, 246, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 1;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .modal-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        /* Letter Card */
+        .letter-card {
+            background-color: var(--paper-bg);
+            width: 90%;
+            max-width: 500px;
+            max-height: 85vh;
+            padding: 3rem 2.5rem;
+            border-radius: 4px;
+            box-shadow: var(--shadow-soft);
+            position: relative;
+            transform: rotate(-1deg) translateY(0);
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease;
+            overflow-y: auto;
+            border: 1px solid rgba(232, 165, 165, 0.1);
+        }
+
+        .modal-overlay.hidden .letter-card {
+            transform: rotate(5deg) translateY(50px);
+            opacity: 0;
+        }
+
+        /* Close Button */
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--accent-warm);
+            cursor: pointer;
+            transition: color 0.3s ease, transform 0.3s ease;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: var(--accent-hover);
+            transform: scale(1.1);
+        }
+
+        /* Sticker/Flower Image Area */
+        .sticker-container {
+            text-align: center;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .flower-sticker {
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 50%;
+            box-shadow: var(--shadow-hard);
+            border: 4px solid var(--paper-bg);
+            transform: rotate(3deg);
+            transition: transform 0.3s ease;
+            background-color: #ffe8e8; /* Placeholder color in case image is missing */
+            display: inline-block;
+        }
+
+        .flower-sticker:hover {
+            transform: rotate(-2deg) scale(1.05);
+        }
+
+        /* Letter Typography */
+        .letter-content {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.25rem;
+            line-height: 1.7;
+            color: var(--text-main);
+        }
+
+        .letter-content p {
+            margin-bottom: 1.5rem;
+        }
+
+        .letter-content .greeting {
+            font-weight: 600;
+            font-size: 1.4rem;
+        }
+
+        .letter-content .sign-off {
+            margin-top: 3rem;
+            font-style: italic;
+        }
+
+        /* Floating Envelope Button */
+        .envelope-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: var(--accent-warm);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 15px rgba(232, 165, 165, 0.4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 900;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.3s, opacity 0.4s ease;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .envelope-btn.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .envelope-btn:hover {
+            transform: scale(1.1) translateY(-5px);
+            background-color: var(--accent-hover);
+        }
+
+        .envelope-icon {
+            width: 28px;
+            height: 28px;
+            fill: currentColor;
+        }
+
+        /* Scrollbar Styling for letter */
+        .letter-card::-webkit-scrollbar {
+            width: 6px;
+        }
+        .letter-card::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .letter-card::-webkit-scrollbar-thumb {
+            background-color: rgba(232, 165, 165, 0.5);
+            border-radius: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .letter-card {
+                padding: 2.5rem 1.5rem;
+            }
+            .letter-content {
+                font-size: 1.15rem;
+            }
+            .envelope-btn {
+                bottom: 20px;
+                right: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Placeholder Page Content -->
+    <main class="page-content">
+        <h1>Welcome Back</h1>
+        <p>This is the rest of the page. Once you close the letter, you can browse around.</p>
+        <p>If you want to read the letter again, just click the envelope in the bottom right corner.</p>
+    </main>
+
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" id="letterModal">
+        <div class="letter-card">
+            <!-- Close Button -->
+            <button class="close-btn" id="closeBtn" aria-label="Close letter">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+
+            <!-- REPLACE THIS IMAGE -->
+            <div class="sticker-container">
+                <!-- ========================================== -->
+                <!-- 🌸 PUT YOUR FLOWER IMAGE FILE NAME BELOW 🌸 -->
+                <!-- Change src="flower.jpg" to your actual image -->
+                <!-- ========================================== -->
+                <img src="file:///C:/Users/AN515/Desktop/photos/flower%20sticker.png" alt="Flower sticker" class="flower-sticker" onerror="this.onerror=null; this.src='file:///C:/Users/AN515/Desktop/photos/flower%20sticker.jpg';">
+            </div>
+
+            <!-- REPLACE THIS TEXT -->
+            <div class="letter-content">
+                <!-- ========================================== -->
+                <!-- 📝 PASTE YOUR DRAFT APOLOGY TEXT BELOW 📝 -->
+                <!-- ========================================== -->
+                
+                <p>dear cass, i'm sorry. these past few days, mahal, i feel like i haven't been showing up for you. i'm going to be honest, mahal, i have been dealing with problems with myself lately. it's something very deeply rooted within me; hindi naman malala yung nangyari, pero malala yung effect sa akin. it's been eating so much of me, hence why hindi kita nakakamusta and nakakausap nang maayos, and it also took me a long time to do something for you. gloomy ikaw, mahal, and you're pulling away; nag-start ito nung galing tayo smb the other day. ngayon pa lang, i'm so sorry, baby, for being so clueless about what happened. it happened so fast sa akin na hindi ko namalayan kung anong nangyari and what led you to pull away. with all my heart, baby, i'm so sorry for whatever it is that i did or did not do, and i also apologize for the hurt it caused you. sa tuwing ganito, mahal, solusyon ko lang talaga ay to show up for you hanggang sa magkaroon tayo ng space to talk about it. pero that's exactly what i've been unable to do—i haven't been showing up for you. hindi ko nagagampanan ang pagiging girlfriend ko sa'yo nang maayos, at natatakot ako na baka nilalagay ulit kita sa sitwasyong pinaramdam ko sa'yo na buhat mo lahat.</p>
+                
+                <p>andito na ako, mahal, showing up for you again. it took me a long time, but i'm here now baby. may this letter be an evidence of my commitment to changing and being a better partner for you. i hope it won't be too much for you to accept the flowers and my apology.</p>
+                
+                <p class="sign-off">mahal na mahal kita, cassandra.</p>
+                
+                <!-- ========================================== -->
+                <!-- 📝 END OF YOUR DRAFT APOLOGY TEXT 📝       -->
+                <!-- ========================================== -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Envelope Button -->
+    <button class="envelope-btn" id="reopenBtn" aria-label="Open letter">
+        <svg class="envelope-icon" viewBox="0 0 24 24">
+            <path d="M22 6C22 4.9 21.1 4 20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6ZM20 6L12 11L4 6H20ZM20 18H4V8L12 13L20 8V18Z" />
+        </svg>
+    </button>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('letterModal');
+            const closeBtn = document.getElementById('closeBtn');
+            const reopenBtn = document.getElementById('reopenBtn');
+            const body = document.body;
+
+            function closeModal() {
+                modal.classList.add('hidden');
+                reopenBtn.classList.add('visible');
+                body.style.overflow = 'auto'; // Restore scrolling
+            }
+
+            function openModal() {
+                modal.classList.remove('hidden');
+                reopenBtn.classList.remove('visible');
+                body.style.overflow = 'hidden'; // Prevent scrolling
+            }
+
+            closeBtn.addEventListener('click', closeModal);
+            reopenBtn.addEventListener('click', openModal);
+
+            // Optional: Close when clicking outside the letter
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

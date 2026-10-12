@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --font-sans: var(--font-outfit);
+}
+
+:root {
+  --background: #fff0f5; /* Lavender blush / Creamy pink default (Cass) */
+  --foreground: #4a4a4a; /* Soft dark text */
+  --primary: #ff85a1; /* Romantic pink */
+  --primary-foreground: #ffffff;
+  --secondary: #ffe4e1; /* Misty rose */
+  --secondary-foreground: #4a4a4a;
+  --accent: #ff69b4; /* Hot pink accent */
+  --accent-foreground: #ffffff;
+  --card: #ffffff;
+  --card-foreground: #4a4a4a;
+}
+
+/* Kei's Profile Blue Theme */
+:root[data-role="kei"] {
+  --background: #f0f6ff; /* Soft ice blue background */
+  --foreground: #1e293b; /* Deep slate font */
+  --primary: #2563eb; /* Vibrant electric blue */
+  --primary-foreground: #ffffff;
+  --secondary: #e0f2fe; /* Light sky blue container */
+  --secondary-foreground: #1e3a8a; /* Soft navy text */
+  --accent: #3b82f6; /* Bright blue accent */
+  --accent-foreground: #ffffff;
+  --card: #ffffff;
+  --card-foreground: #1e293b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1f1416; /* Deep romantic dark */
+    --foreground: #fcf1f3; /* Soft light text */
+    --primary: #d94a6e;
+    --primary-foreground: #ffffff;
+    --secondary: #3b282c;
+    --secondary-foreground: #fcf1f3;
+    --accent: #ff85a1;
+    --accent-foreground: #ffffff;
+    --card: #2e1e22;
+    --card-foreground: #fcf1f3;
+  }
+
+  :root[data-role="kei"] {
+    --background: #0b132b; /* Midnight deep blue */
+    --foreground: #f1f5f9; /* Soft ice light text */
+    --primary: #3b82f6; /* Vibrant blue */
+    --primary-foreground: #ffffff;
+    --secondary: #1c2541; /* Deep navy container */
+    --secondary-foreground: #e2e8f0;
+    --accent: #60a5fa;
+    --accent-foreground: #ffffff;
+    --card: #151e36; /* Midnight card background */
+    --card-foreground: #f1f5f9;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
