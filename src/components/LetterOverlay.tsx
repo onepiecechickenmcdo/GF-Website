@@ -1,11 +1,62 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import PolaroidWall, { PolaroidCardData } from "./PolaroidWall";
+import { LETTER_CONTENT, INITIAL_POLAROID_CARDS } from "../lib/config";
 
-export default function LetterOverlay() {
-  const [animationState, setAnimationState] = useState<"idle" | "opening" | "fading" | "letter" | "closing">("idle");
+export type Profile = "cass" | "kei";
+
+interface LetterOverlayProps {
+  profile?: Profile;
+  mode?: "popup" | "archive";
+  title?: string;
+  letterContent?: {
+    greeting: string;
+    paragraphs: string[];
+    signoff: string;
+  };
+  cards?: PolaroidCardData[];
+  onClose?: () => void;
+}
+
+export default function LetterOverlay({
+  profile,
+  mode = "popup",
+  title = LETTER_CONTENT.title,
+  letterContent = LETTER_CONTENT,
+  cards = INITIAL_POLAROID_CARDS,
+  onClose,
+}: LetterOverlayProps) {
+  const [shouldShow, setShouldShow] = useState<boolean>(mode === "archive");
+  const [loadingStatus, setLoadingStatus] = useState<boolean>(mode === "popup");
+
+  // Fetch server-side status flags on mount
+  useEffect(() => {
+    if (mode === "archive") {
+      setShouldShow(true);
+      setLoadingStatus(false);
+      return;
+    }
+
+    fetch("/api/letter-status", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        setShouldShow(!!data.isActive);
+        setLoadingStatus(false);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch letter status", err);
+        setShouldShow(false);
+        setLoadingStatus(false);
+      });
+  }, [mode]);
+
+  const [animationState, setAnimationState] = useState<
+    "idle" | "opening" | "fading" | "letter" | "closing"
+  >("idle");
   const [isVisible, setIsVisible] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Check prefers-reduced-motion
   useEffect(() => {
@@ -18,7 +69,7 @@ export default function LetterOverlay() {
 
   // Lock body scroll when overlay is active and clean up on unmount
   useEffect(() => {
-    if (isVisible) {
+    if (isVisible && shouldShow) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "auto";
@@ -26,7 +77,7 @@ export default function LetterOverlay() {
     return () => {
       document.body.style.overflow = "auto";
     };
-  }, [isVisible]);
+  }, [isVisible, shouldShow]);
 
   // Handle escape key
   useEffect(() => {
@@ -60,13 +111,18 @@ export default function LetterOverlay() {
     setAnimationState("closing");
     setTimeout(() => {
       setIsVisible(false);
+      if (onClose) onClose();
     }, 400); // match backdrop fade-out duration
   };
 
-  if (!isVisible) return null;
+  if (loadingStatus || !isVisible || !shouldShow) return null;
 
-  const showEnvelope = animationState === "idle" || animationState === "opening" || animationState === "fading";
-  const showLetter = animationState === "letter" || animationState === "closing";
+  const showEnvelope =
+    animationState === "idle" ||
+    animationState === "opening" ||
+    animationState === "fading";
+  const showLetter =
+    animationState === "letter" || animationState === "closing";
 
   return (
     <div
@@ -84,8 +140,8 @@ export default function LetterOverlay() {
             animationState === "opening"
               ? "letter-envelope-anim-active"
               : animationState === "fading"
-              ? "letter-envelope-fade-out"
-              : ""
+                ? "letter-envelope-fade-out"
+                : ""
           }`}
           onAnimationEnd={(e) => {
             if (e.animationName.includes("envelopeFadeOut")) {
@@ -115,7 +171,8 @@ export default function LetterOverlay() {
                 transform: "translate(-50%, -50%)",
                 width: "420px",
                 height: "320px",
-                background: "radial-gradient(circle, rgba(232, 69, 107, 0.22) 0%, rgba(232, 69, 107, 0) 70%)",
+                background:
+                  "radial-gradient(circle, rgba(232, 69, 107, 0.22) 0%, rgba(232, 69, 107, 0) 70%)",
                 borderRadius: "50%",
                 zIndex: 0,
               }}
@@ -172,7 +229,9 @@ export default function LetterOverlay() {
               {/* 4. TOP FLAP WRAPPER */}
               <div
                 className={`letter-flap absolute inset-x-0 top-0 rounded-t-[16px] ${
-                  animationState === "opening" || animationState === "fading" ? "letter-flap-open" : ""
+                  animationState === "opening" || animationState === "fading"
+                    ? "letter-flap-open"
+                    : ""
                 }`}
                 style={{
                   zIndex: 5,
@@ -192,7 +251,9 @@ export default function LetterOverlay() {
                 {/* Soft shadow duplicate triangle behind front face */}
                 <div
                   className={`absolute inset-0 bg-[rgba(0,0,0,0.35)] transition-opacity duration-300 ${
-                    animationState === "opening" || animationState === "fading" ? "opacity-0" : "opacity-100"
+                    animationState === "opening" || animationState === "fading"
+                      ? "opacity-0"
+                      : "opacity-100"
                   }`}
                   style={{
                     top: "3px",
@@ -239,7 +300,9 @@ export default function LetterOverlay() {
           {/* Tap Hint */}
           <div
             className={`letter-hint mt-8 text-[#fff5f5]/80 font-sans text-sm tracking-wide bg-[#2e1a20]/90 px-5 py-2 rounded-full border border-[rgba(232,69,107,0.25)] shadow-lg transition-opacity duration-200 ${
-              animationState !== "idle" ? "opacity-0 pointer-events-none" : "animate-pulse"
+              animationState !== "idle"
+                ? "opacity-0 pointer-events-none"
+                : "animate-pulse"
             }`}
           >
             Tap envelope to open ✨
@@ -251,12 +314,19 @@ export default function LetterOverlay() {
       {showLetter && (
         <div
           className={`letter-card-wrapper relative w-full max-w-2xl max-h-[85vh] bg-[#2e1a20] border border-[rgba(232,69,107,0.25)] rounded-[24px] shadow-2xl shadow-[rgba(232,69,107,0.15)] flex flex-col overflow-hidden ${
-            animationState === "letter" ? "letter-card-enter" : animationState === "closing" ? "opacity-0 scale-95 transition-all duration-300" : ""
+            animationState === "letter"
+              ? "letter-card-enter"
+              : animationState === "closing"
+                ? "opacity-0 scale-95 transition-all duration-300"
+                : ""
           }`}
           style={{ willChange: "transform, opacity" }}
         >
           {/* Top Bar with Close '×' */}
-          <div className="letter-header flex items-center justify-end px-6 pt-4 pb-2 border-b border-[rgba(232,69,107,0.1)]">
+          <div className="letter-header flex items-center justify-between px-6 pt-4 pb-2 border-b border-[rgba(232,69,107,0.1)]">
+            <span className="text-xs font-sans font-bold text-[#e8456b] tracking-wider uppercase">
+              {title}
+            </span>
             <button
               onClick={handleClose}
               className="letter-close-btn w-9 h-9 rounded-full bg-[#362028] text-[#fff5f5]/80 hover:text-white hover:bg-[rgba(232,69,107,0.2)] flex items-center justify-center transition-colors text-xl font-sans"
@@ -267,33 +337,33 @@ export default function LetterOverlay() {
           </div>
 
           {/* Scrollable Letter Content */}
-          <div className="letter-body flex-1 overflow-y-auto px-6 sm:px-10 py-6 text-[#fff5f5] font-serif space-y-6 leading-relaxed text-base sm:text-lg">
-            {/* ================= WRITE MY LETTER HERE ================= */}
+          <div
+            ref={scrollContainerRef}
+            className="letter-body flex-1 overflow-y-auto px-6 sm:px-10 py-6 text-[#fff5f5] font-serif space-y-6 leading-relaxed text-base sm:text-lg"
+          >
+            {/* ================= POLAROID WALL INTEGRATION ================= */}
+            <PolaroidWall scrollContainerRef={scrollContainerRef} cards={cards} />
+            {/* ============================================================= */}
+
+            {/* ================= LETTER CONTENT ================= */}
             <div className="letter-content space-y-4">
-              <p>My dearest love,</p>
+              <p>{letterContent.greeting}</p>
 
-              <p>
-                As I sit here thinking about all our moments together, my heart is simply overflowing with gratitude and warmth. Every single day with you feels like a gift I never knew I deserved.
-              </p>
+              {letterContent.paragraphs.map((p, idx) => (
+                <p key={idx}>{p}</p>
+              ))}
 
-              <p>
-                Thank you for your endless patience, your infectious laughter, and the gentle way you make every ordinary day feel extraordinary. You are my safe haven, my biggest cheerleader, and my absolute favorite part of life.
-              </p>
-
-              <p>
-                No matter where life takes us or what adventures lie ahead, I promise to keep choosing you, loving you, and cherishing every laugh and quiet moment we share. Here is to us, and to all the beautiful chapters still waiting to be written.
-              </p>
-
-              <p className="pt-4">
-                Forever and always yours,<br />
-                <span className="text-[#e8456b] font-semibold">Your Love</span>
+              <p className="pt-4 whitespace-pre-line">
+                {letterContent.signoff}
               </p>
             </div>
             {/* ======================================================= */}
 
             {/* Bottom Heart Icon */}
             <div className="flex justify-center pt-4 pb-2">
-              <span className="text-[#e8456b] text-xl animate-pulse">💖</span>
+              <span className="text-[#e8456b] text-xl animate-pulse">
+                𓆝𓆟༝˚｡⋆𓆉︎⋆｡˚༝𓆞𓆝
+              </span>
             </div>
           </div>
 
@@ -315,7 +385,8 @@ export default function LetterOverlay() {
           animation: letterFloat 3.5s ease-in-out infinite;
         }
         @keyframes letterFloat {
-          0%, 100% {
+          0%,
+          100% {
             transform: translateY(0px);
           }
           50% {
@@ -324,7 +395,8 @@ export default function LetterOverlay() {
         }
 
         .letter-envelope-anim-active {
-          animation: envelopeRiseAndFade 750ms cubic-bezier(0.45, 0, 0.2, 1) forwards;
+          animation: envelopeRiseAndFade 750ms cubic-bezier(0.45, 0, 0.2, 1)
+            forwards;
         }
 
         @keyframes envelopeRiseAndFade {
@@ -340,7 +412,8 @@ export default function LetterOverlay() {
         }
 
         .letter-envelope-fade-out {
-          animation: envelopeFadeOut 450ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+          animation: envelopeFadeOut 450ms cubic-bezier(0.22, 1, 0.36, 1)
+            forwards;
         }
 
         @keyframes envelopeFadeOut {

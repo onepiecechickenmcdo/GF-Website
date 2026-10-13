@@ -14,6 +14,7 @@ import {
   doc,
   getDoc,
 } from "firebase/firestore";
+import LetterOverlay from "./LetterOverlay";
 
 interface LoveNote {
   id: string;
@@ -23,6 +24,7 @@ interface LoveNote {
   isSaved: boolean;
   sender?: string;
   senderName?: string;
+  isSpecialLetter?: boolean;
 }
 
 export default function LoveNotes() {
@@ -32,6 +34,20 @@ export default function LoveNotes() {
   const [content, setContent] = useState("");
   const [activeNote, setActiveNote] = useState<LoveNote | null>(null);
   const [activeTab, setActiveTab] = useState<"write" | "mailbox">("mailbox");
+  const [showSpecialLetter, setShowSpecialLetter] = useState(false);
+  const [isArchived, setIsArchived] = useState(false);
+
+  // Fetch server-side archive status
+  useEffect(() => {
+    fetch("/api/letter-status", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        setIsArchived(!!data.isArchived);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch letter status in LoveNotes", err);
+      });
+  }, []);
 
   useEffect(() => {
     // Order by createdAt descending — if this fails with index error, fall back to unordered
@@ -143,11 +159,28 @@ export default function LoveNotes() {
 
   const partnerName = role === "kei" ? "Cass" : "Kei";
 
+  // Special Monthsary Letter entry for the mailbox (appears for Cass only when isArchived is true)
+  const showSpecialEntry = role === "cass" && isArchived;
+  const specialLetterNote: LoveNote | null = showSpecialEntry
+    ? {
+        id: "special-monthsary-letter",
+        title: "💌 Our Monthsary Letter & Polaroid Wall",
+        content: "Happy monthsary mahal! Click to open our special archived letter and cascading Polaroid wall through time...",
+        sentAt: "Oct 14, 2026",
+        isSaved: true,
+        sender: "kei",
+        senderName: "Kei",
+        isSpecialLetter: true,
+      }
+    : null;
+
+  const allNotes = specialLetterNote ? [specialLetterNote, ...notes] : notes;
+
   return (
     <div className="bg-card rounded-3xl p-6 shadow-sm border border-secondary space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-lg text-foreground flex items-center gap-2">
-          <span>💌</span> Love Notes
+          <span>💌</span> Love Notes & Mailbox
         </h3>
         <div className="flex bg-secondary/40 p-1 rounded-xl gap-1">
           <button
@@ -168,7 +201,7 @@ export default function LoveNotes() {
                 : "text-secondary-foreground hover:text-foreground"
             }`}
           >
-            Mailbox ({notes.length})
+            Mailbox ({allNotes.length})
           </button>
         </div>
       </div>
@@ -199,7 +232,7 @@ export default function LoveNotes() {
         </form>
       ) : (
         <div className="space-y-4 animate-in fade-in duration-200">
-          {notes.length === 0 ? (
+          {allNotes.length === 0 ? (
             <div className="text-center py-8 space-y-3">
               <p className="text-3xl">📬</p>
               <p className="text-sm text-secondary-foreground">
@@ -214,14 +247,22 @@ export default function LoveNotes() {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1">
-              {notes.map((note) => {
+              {allNotes.map((note) => {
                 const isFromCass = note.sender === "cass" || note.senderName?.toLowerCase() === "cass";
                 return (
                   <button
                     key={note.id}
-                    onClick={() => setActiveNote(note)}
+                    onClick={() => {
+                      if (note.isSpecialLetter) {
+                        setShowSpecialLetter(true);
+                      } else {
+                        setActiveNote(note);
+                      }
+                    }}
                     className={`p-4 rounded-2xl border text-left flex flex-col justify-between h-32 transition-all active:scale-95 shadow-sm relative ${
-                      isFromCass
+                      note.isSpecialLetter
+                        ? "bg-rose-100/90 dark:bg-rose-950/60 border-2 border-rose-400 shadow-md shadow-rose-500/20 hover:border-rose-500 col-span-2"
+                        : isFromCass
                         ? "bg-blue-50/90 dark:bg-blue-950/40 border-2 border-blue-400 dark:border-blue-500 shadow-md shadow-blue-500/15 hover:border-blue-500"
                         : note.isSaved
                         ? "bg-amber-50/40 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900"
@@ -230,7 +271,7 @@ export default function LoveNotes() {
                   >
                     <div className="space-y-1 w-full">
                       <div className="flex justify-between items-start">
-                        <span className="text-lg">{isFromCass ? "💙" : "✉️"}</span>
+                        <span className="text-lg">{note.isSpecialLetter ? "💖" : isFromCass ? "💙" : "✉️"}</span>
                         {note.isSaved && <Star size={12} className="fill-amber-400 text-amber-400" />}
                       </div>
                       <h5 className="font-semibold text-xs text-foreground truncate w-full flex items-center gap-1">
@@ -245,11 +286,13 @@ export default function LoveNotes() {
                         <Calendar size={8} /> {note.sentAt.split(",")[0]}
                       </span>
                       <span className={`font-semibold px-1.5 py-0.5 rounded text-[8px] uppercase flex items-center gap-1 ${
-                        isFromCass
+                        note.isSpecialLetter
+                          ? "bg-rose-500 text-white font-bold tracking-wide shadow-xs"
+                          : isFromCass
                           ? "bg-blue-500 text-white font-bold tracking-wide shadow-xs"
                           : "bg-background/50 text-secondary-foreground"
                       }`}>
-                        From {note.senderName || "Kei"} {isFromCass ? "💙" : ""}
+                        {note.isSpecialLetter ? "Monthsary Letter ✨" : `From ${note.senderName || "Kei"}`}
                       </span>
                     </div>
                   </button>
@@ -258,6 +301,15 @@ export default function LoveNotes() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Special Letter Overlay in Archive Mode */}
+      {showSpecialLetter && (
+        <LetterOverlay
+          mode="archive"
+          profile={role || "kei"}
+          onClose={() => setShowSpecialLetter(false)}
+        />
       )}
 
       {activeNote && (

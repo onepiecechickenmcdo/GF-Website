@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { Caveat } from "next/font/google";
 import { Sparkles, Heart } from "lucide-react";
+import { INITIAL_POLAROID_CARDS } from "../lib/config";
 
 const caveat = Caveat({ subsets: ["latin"], weight: ["400", "700"] });
 
-interface PolaroidCardData {
+export interface PolaroidCardData {
   id: string;
   src: string;
   caption: string;
@@ -15,68 +16,132 @@ interface PolaroidCardData {
   featured?: boolean;
 }
 
-const INITIAL_CARDS: PolaroidCardData[] = [
-  {
-    id: "card-1",
-    src: "/polaroids/photo-1.jpg",
-    caption: "10/14",
-    backText: "Where our forever began. Every moment with you is my absolute favorite adventure.",
-    rotation: -3.5,
-    featured: true,
-  },
-  {
-    id: "card-2",
-    src: "/polaroids/photo-2.jpg",
-    caption: "",
-    backText: "A quiet afternoon we will always cherish together.",
-    rotation: 3.2,
-  },
-  {
-    id: "card-3",
-    src: "/polaroids/photo-3.jpg",
-    caption: "",
-    backText: "Laughing until our stomachs hurt in the middle of nowhere.",
-    rotation: -4.0,
-  },
-  {
-    id: "card-4",
-    src: "/polaroids/photo-4.jpg",
-    caption: "",
-    backText: "My favorite place in the entire world is right beside you.",
-    rotation: 3.8,
-  },
-  {
-    id: "card-5",
-    src: "/polaroids/photo-5.jpg",
-    caption: "",
-    backText: "Coffee dates, sweet pastries, and endless conversation.",
-    rotation: -3.1,
-  },
-  {
-    id: "card-6",
-    src: "/polaroids/photo-6.jpg",
-    caption: "",
-    backText: "Watching the golden sunset paint the sky just for us.",
-    rotation: 4.2,
-  },
-  {
-    id: "card-7",
-    src: "/polaroids/photo-7.jpg",
-    caption: "",
-    backText: "Hand in hand through every single season of life.",
-    rotation: -3.6,
-  },
-  {
-    id: "card-8",
-    src: "/polaroids/photo-8.jpg",
-    caption: "",
-    backText: "Making sweet memories and building our dream future.",
-    rotation: 3.5,
-  },
-];
+interface PolaroidCardBackProps {
+  backText: string;
+}
 
-export default function PolaroidWall() {
-  const [cards, setCards] = useState<PolaroidCardData[]>(INITIAL_CARDS);
+function useFitText(text: string) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const textRef = useRef<HTMLDivElement | null>(null);
+  const [isScrollable, setIsScrollable] = useState(false);
+
+  const adjust = () => {
+    const container = containerRef.current;
+    const el = textRef.current;
+    if (!container || !el) return;
+
+    let low = 13;
+    let high = 28;
+    let best = 13;
+
+    const availableHeight = container.clientHeight - 4;
+    const availableWidth = container.clientWidth;
+
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      el.style.fontSize = `${mid}px`;
+
+      if (
+        el.offsetHeight <= availableHeight &&
+        el.offsetWidth <= availableWidth
+      ) {
+        best = mid;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+
+    el.style.fontSize = `${best}px`;
+    setIsScrollable(el.offsetHeight > availableHeight);
+  };
+
+  useLayoutEffect(() => {
+    adjust();
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(adjust);
+    }
+  }, [text]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver(() => {
+      adjust();
+    });
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, [text]);
+
+  return { containerRef, textRef, isScrollable };
+}
+
+function PolaroidCardBack({ backText }: PolaroidCardBackProps) {
+  const { containerRef, textRef, isScrollable } = useFitText(backText);
+
+  return (
+    <div
+      className="polaroid-card-back absolute inset-0 bg-[#fff6f3] text-[#2e1a20] rounded-[4px] shadow-[0_12px_30px_rgba(0,0,0,0.45),0_0_24px_rgba(232,69,107,0.15)] flex flex-col overflow-hidden"
+      style={{
+        backfaceVisibility: "hidden",
+        transform: "rotateY(180deg)",
+        boxSizing: "border-box",
+        padding: "5% 6%",
+      }}
+    >
+      {/* Header row */}
+      <div className="flex-none text-[11px] font-sans font-bold text-rose-500 tracking-wider flex items-center justify-between px-0.5 pt-0.5">
+        <span>MEMORIES</span>
+        <span>❤️</span>
+      </div>
+
+      {/* Message container (.polaroid-back-body) */}
+      <div
+        ref={containerRef}
+        className="polaroid-back-body flex-1 min-h-0 flex flex-col my-1 px-1 overflow-hidden"
+        style={{
+          ...(isScrollable
+            ? {
+                overflowY: "auto",
+                overscrollBehavior: "contain",
+                maskImage: "linear-gradient(to bottom, black 85%, transparent)",
+                WebkitMaskImage:
+                  "linear-gradient(to bottom, black 85%, transparent)",
+              }
+            : {}),
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Inner text element (.polaroid-back-text) with margin: auto */}
+        <div
+          ref={textRef}
+          className={`${caveat.className} polaroid-back-text my-auto w-full text-center text-[#5a2a35] select-text`}
+          style={{ lineHeight: 1.25 }}
+        >
+          {backText}
+        </div>
+      </div>
+
+      {/* Footer hint */}
+      <div className="flex-none text-center text-[10px] font-sans text-rose-400 pt-1">
+        Click again to flip back
+      </div>
+    </div>
+  );
+}
+
+interface PolaroidWallProps {
+  scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
+  cards?: PolaroidCardData[];
+}
+
+export default function PolaroidWall({
+  scrollContainerRef,
+  cards: propCards,
+}: PolaroidWallProps) {
+  const cards = propCards || INITIAL_POLAROID_CARDS;
   const [flippedMap, setFlippedMap] = useState<Record<string, boolean>>({});
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -92,10 +157,9 @@ export default function PolaroidWall() {
     return () => mediaQuery.removeEventListener("change", listener);
   }, []);
 
-  // Intersection Observer for scroll reveal
+  // Intersection Observer for scroll reveal using letter card's scroll container as root
   useEffect(() => {
     if (reducedMotion) {
-      // Make all visible immediately if reduced motion
       const all: Record<string, boolean> = {};
       cards.forEach((c) => (all[c.id] = true));
       setVisibleIds(all);
@@ -114,7 +178,10 @@ export default function PolaroidWall() {
           }
         });
       },
-      { threshold: 0.15 }
+      {
+        root: scrollContainerRef?.current || null,
+        threshold: 0.1,
+      },
     );
 
     Object.values(cardRefs.current).forEach((el) => {
@@ -122,72 +189,53 @@ export default function PolaroidWall() {
     });
 
     return () => observer.disconnect();
-  }, [cards, reducedMotion]);
+  }, [cards, reducedMotion, scrollContainerRef]);
 
-  const toggleFlip = (id: string, e?: React.MouseEvent | React.KeyboardEvent) => {
-    if (e) {
-      // If target was an editable field, don't flip
-      const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
-        return;
-      }
-    }
+  const toggleFlip = (id: string) => {
     setFlippedMap((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const handleCaptionChange = (id: string, newCaption: string) => {
-    setCards((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, caption: newCaption } : c))
-    );
-  };
-
-  const handleBackTextChange = (id: string, newBackText: string) => {
-    setCards((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, backText: newBackText } : c))
-    );
-  };
-
   return (
-    <section className="polaroid-section my-12 space-y-8">
+    <div className="polaroid-wall-section my-6 space-y-6">
       {/* SECTION HEADER */}
-      <div className="space-y-3 text-center sm:text-left">
-        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary/15 text-primary text-xs font-bold tracking-wide uppercase shadow-sm">
+      <div className="space-y-2 text-center sm:text-left px-2">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/15 text-primary text-xs font-bold tracking-wide uppercase shadow-sm">
           <Sparkles size={13} />
-          <span>OUR POLAROID WALL</span>
+          <span>POLAROID WALL</span>
         </div>
-        <h2 className="text-2xl sm:text-3xl font-serif font-bold text-foreground">
-          Moments Along Our Path
+        <h2 className="text-xl sm:text-2xl font-serif font-bold text-foreground">
+          Casstelle through time
         </h2>
-        <p className="text-sm text-secondary-foreground">
-          Hover to bring forward, click to flip, or type custom captions.
+        <p className="text-xs sm:text-sm text-secondary-foreground">
+          Hover to bring forward, click to flip.
         </p>
       </div>
 
       {/* CASCADING ZIGZAG GRID / STACK */}
-      <div className="polaroid-wall-container relative max-w-4xl mx-auto py-6 px-2 sm:px-6">
-        <div className="flex flex-col space-y-[-24px] sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-x-12 sm:gap-y-8">
+      <div className="polaroid-wall-container relative max-w-lg mx-auto py-4 px-2">
+        <div className="flex flex-col space-y-[-18px] sm:space-y-[-22px]">
           {cards.map((card, index) => {
             const isFlipped = !!flippedMap[card.id];
             const isHovered = hoveredId === card.id;
             const isVisible = !!visibleIds[card.id];
 
-            // Alternating zigzag alignment on mobile and desktop
-            // Odd index -> left, Even index -> right
+            // Alternating zigzag alignment
             const isLeft = index % 2 === 0;
             const alignClass = card.featured
-              ? "mx-auto w-[82%]"
+              ? "mx-auto w-[78%]"
               : isLeft
-              ? "mr-auto w-[68%] sm:w-[62%] sm:translate-x-[-20px]"
-              : "ml-auto w-[68%] sm:w-[62%] sm:translate-x-[20px]";
+                ? "mr-auto w-[62%] translate-x-[-12px] sm:translate-x-[-24px]"
+                : "ml-auto w-[62%] translate-x-[12px] sm:translate-x-[24px]";
 
             const rotationDeg = card.rotation;
             const transformStyle = reducedMotion
               ? "none"
               : isHovered
-              ? "rotate(0deg) scale(1.05)"
-              : `rotate(${rotationDeg}deg) scale(1)`;
+                ? "rotate(0deg) scale(1.05)"
+                : `rotate(${rotationDeg}deg) scale(1)`;
 
-            const zIndexClass = isHovered || isFlipped ? "z-30" : `z-${10 + index}`;
+            const zIndexClass =
+              isHovered || isFlipped ? "z-30" : `z-${10 + index}`;
 
             return (
               <div
@@ -197,19 +245,20 @@ export default function PolaroidWall() {
                 }}
                 data-polaroid-id={card.id}
                 className={`polaroid-wrapper relative cursor-pointer transition-all duration-500 ease-out ${alignClass} ${zIndexClass} ${
-                  !isVisible && !reducedMotion ? "opacity-0 translate-y-6" : "opacity-100 translate-y-0"
+                  !isVisible && !reducedMotion
+                    ? "opacity-0 translate-y-6"
+                    : "opacity-100 translate-y-0"
                 }`}
                 style={{
                   transitionDelay: `${index * 60}ms`,
-                  marginTop: index === 0 ? "0px" : "-20px",
                 }}
                 onMouseEnter={() => setHoveredId(card.id)}
                 onMouseLeave={() => setHoveredId(null)}
-                onClick={(e) => toggleFlip(card.id, e)}
+                onClick={() => toggleFlip(card.id)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    toggleFlip(card.id, e);
+                    toggleFlip(card.id);
                   }
                 }}
                 tabIndex={0}
@@ -225,18 +274,20 @@ export default function PolaroidWall() {
                     willChange: isHovered ? "transform" : "auto",
                   }}
                 >
-                  {/* Inner element holding 3D flip */}
+                  {/* Inner element holding 3D flip (NO overflow hidden here!) */}
                   <div
                     className="polaroid-flip-inner relative w-full transition-transform duration-600 ease-in-out"
                     style={{
                       transformStyle: "preserve-3d",
-                      transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
+                      transform: isFlipped
+                        ? "rotateY(180deg)"
+                        : "rotateY(0deg)",
                       willChange: "transform",
                     }}
                   >
                     {/* ================= FRONT FACE ================= */}
                     <div
-                      className="polaroid-card-front bg-[#fff6f3] text-[#2e1a20] p-3 pb-4 rounded-[4px] shadow-[0_12px_30px_rgba(0,0,0,0.45),0_0_24px_rgba(232,69,107,0.15)] flex flex-col items-center"
+                      className="polaroid-card-front bg-[#fff6f3] text-[#2e1a20] p-2.5 pb-3.5 rounded-[4px] shadow-[0_12px_30px_rgba(0,0,0,0.45),0_0_24px_rgba(232,69,107,0.15)] flex flex-col items-center"
                       style={{ backfaceVisibility: "hidden" }}
                     >
                       {/* Photo area */}
@@ -246,57 +297,33 @@ export default function PolaroidWall() {
                           alt={`Memory ${index + 1}`}
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            // Fallback gradient with heart if image fails to load
                             const target = e.target as HTMLElement;
                             target.style.display = "none";
                           }}
                         />
-                        {/* Fallback visual if image missing */}
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-rose-100/80 to-pink-200/80 text-rose-500 -z-10">
-                          <Heart size={32} className="fill-rose-400 text-rose-500 animate-pulse" />
-                          <span className="text-[10px] font-sans font-bold mt-1 text-rose-700/70">Memory #{index + 1}</span>
+                          <Heart
+                            size={28}
+                            className="fill-rose-400 text-rose-500 animate-pulse"
+                          />
+                          <span className="text-[10px] font-sans font-bold mt-1 text-rose-700/70">
+                            Memory #{index + 1}
+                          </span>
                         </div>
                       </div>
 
                       {/* Caption strip */}
-                      <div className="w-full pt-3 pb-1 px-1 flex items-center justify-center">
-                        <textarea
-                          value={card.caption}
-                          onChange={(e) => handleCaptionChange(card.id, e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                          placeholder="Write caption..."
-                          rows={1}
-                          className={`${caveat.className} w-full text-center text-xl sm:text-2xl font-bold text-[#5a2a35] bg-transparent border-b border-transparent hover:border-rose-300 focus:border-rose-400 focus:outline-none resize-none overflow-hidden`}
-                        />
+                      <div className="w-full pt-2.5 pb-1 px-1 flex items-center justify-center">
+                        <span
+                          className={`${caveat.className} w-full text-center text-xl sm:text-2xl font-bold text-[#5a2a35]`}
+                        >
+                          {card.caption}
+                        </span>
                       </div>
                     </div>
 
                     {/* ================= BACK FACE ================= */}
-                    <div
-                      className="polaroid-card-back absolute inset-0 bg-[#fff6f3] text-[#2e1a20] p-6 rounded-[4px] shadow-[0_12px_30px_rgba(0,0,0,0.45),0_0_24px_rgba(232,69,107,0.15)] flex flex-col justify-between"
-                      style={{
-                        backfaceVisibility: "hidden",
-                        transform: "rotateY(180deg)",
-                      }}
-                    >
-                      <div className="text-xs font-sans font-bold text-rose-500 tracking-wider flex items-center justify-between">
-                        <span>MEMORIES</span>
-                        <span>❤️</span>
-                      </div>
-                      <div className="my-auto py-2">
-                        <textarea
-                          value={card.backText}
-                          onChange={(e) => handleBackTextChange(card.id, e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                          placeholder="Write memory story..."
-                          rows={4}
-                          className={`${caveat.className} w-full text-center text-xl sm:text-2xl text-[#5a2a35] bg-transparent border border-dashed border-rose-200 hover:border-rose-400 focus:border-rose-500 focus:outline-none rounded-lg p-2 resize-none leading-relaxed`}
-                        />
-                      </div>
-                      <div className="text-center text-[10px] font-sans text-rose-400">
-                        Click again to flip back
-                      </div>
-                    </div>
+                    <PolaroidCardBack backText={card.backText} />
                   </div>
                 </div>
               </div>
@@ -304,6 +331,6 @@ export default function PolaroidWall() {
           })}
         </div>
       </div>
-    </section>
+    </div>
   );
 }
