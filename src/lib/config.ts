@@ -5,11 +5,10 @@ export const LETTER_CONTENT = {
   title: "A Letter For You",
   greeting: "happy monthsary mahal,",
   paragraphs: [
-    "i hope you like this small thing i made for you. crinam ko to, i did this nung monday lang when i shouldve been reviewing instead hahaha. i also cried habang cinocompile yung captions per photo, i just realized na we’ve come so far baby ;(. coordinate natin to baby.",
+    "i hope you like this small thing i made for you. crinam ko to, i did this nung monday lang when i shouldve been reviewing instead hahaha. i also cried habang cinocompile yung captions per photo, i just realized na we’ve come so far baby ;(.",
     "im sorry baby. i know the past few months has been so rough for us, but im always so grateful to have you still at the end of the day even when we’re not okay. i dont expect us to have an easy life nor an easy relationship, but im willing to see through all of it as long as im with you bebe.",
     "thank you for all the patience and love you've shown me through out our entire relationship. You are my constant and my rock, you keep me grounded especially whenever im overwhelmed and so little words can describe how much you mean to me. I hope na wherever life may take us, magkasama pa rin tayo. hindi pwedeng hindi, buy 1 take 1 promo tayo.",
-    "im sorry mahal also kasi medyo on the edge rin tayo ngayon, i think we saw things differently again. i hope you’re open to discussing this with me baby, not to fight further, but to see where the other is coming from.",
-    "that said, can i invite you to dinner today mahal? after class mo sana if thats okay, sunduin kita then dinner tayo sa smb mahal. celebrate natin motmot, aswell as i clear out natin ito. i hope this is not too much of a request sayo mahal, please do say if ever na hindi kakayanin or may prior plans ikaw.",
+    "that said, can i invite you to dinner today mahal? after class mo sana if thats okay, sunduin kita then dinner tayo sa smb mahal, yakiniku like tayo, or pwede rin mag wok it out. celebrate tayo motmot asawa. i hope this is not too much of a request sayo mahal, please do say if ever na hindi kakayanin or may prior plans ikaw.",
     "happy monthsary again mahal ko, mahal na mahal na mahal kita.",
   ],
   signoff: "with love,\nkei",
