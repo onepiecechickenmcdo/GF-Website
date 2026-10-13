@@ -11,6 +11,7 @@ import LoveNotes from "../components/LoveNotes";
 import SharedBucketList from "../components/SharedBucketList";
 import WeeklyCheckInForm from "../components/WeeklyCheckInForm";
 import ApologyLetter from "../components/ApologyLetter";
+import LetterOverlay, { Profile } from "../components/LetterOverlay";
 import { Heart, Star, Calendar, MessageSquare, ShieldAlert } from "lucide-react";
 
 import { db } from "../lib/firebase";
@@ -99,6 +100,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen pb-16 bg-background text-foreground transition-colors duration-300">
+      {role === "cass" && <LetterOverlay profile={role as Profile} />}
       {role === "cass" && <ApologyLetter />}
       {/* Top Header */}
       <header className="sticky top-0 z-40 backdrop-blur-md bg-background/80 border-b border-secondary/35 px-6 py-4 flex items-center justify-between max-w-5xl mx-auto">
